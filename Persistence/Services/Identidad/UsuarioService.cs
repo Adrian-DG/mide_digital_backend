@@ -1,84 +1,93 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Application.Abstraction;
 using Application.DTOs.Identidad;
 using Application.Exceptions;
 using Application.Services.Identidad;
 using Dapper;
 using Domain.Entities.Identidad;
 using Domain.Enums;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Persistence.Connections;
 using Persistence.Constants;
-using Persistence.Context;
 
 namespace Persistence.Services.Identidad
 {
+    /// <summary>
+    /// Las escrituras pasan por <see cref="UserManager{TUser}"/>, que es quien
+    /// aplica la política de contraseñas, el hash, la normalización del correo y
+    /// el bloqueo por intentos fallidos. Las lecturas siguen por Dapper.
+    /// </summary>
     public class UsuarioService : IUsuarioService
     {
-        private const string ColumnasUsuario =
-            "Id, Nombres, Apellidos, Correo, TipoUsuario, Cedula, Telefono, CorreoConfirmado, FechaRegistro";
+        private static readonly string ColumnasUsuario = $@"
+            SELECT  Id,
+                    Nombres,
+                    Apellidos,
+                    Email AS Correo,
+                    TipoUsuario,
+                    Cedula,
+                    PhoneNumber AS Telefono,
+                    EmailConfirmed AS CorreoConfirmado,
+                    FechaRegistro
+            FROM    {Tablas.Usuarios}";
 
-        private readonly MideDbContext _context;
+        private readonly UserManager<Usuario> _userManager;
         private readonly ISqlConnectionFactory _conexiones;
-        private readonly IPasswordHasher _passwordHasher;
 
-        public UsuarioService(MideDbContext context, ISqlConnectionFactory conexiones, IPasswordHasher passwordHasher)
+        public UsuarioService(UserManager<Usuario> userManager, ISqlConnectionFactory conexiones)
         {
-            _context = context;
+            _userManager = userManager;
             _conexiones = conexiones;
-            _passwordHasher = passwordHasher;
         }
 
         public async Task<UsuarioDto> RegistrarAsync(RegistrarUsuarioDto dto, CancellationToken cancellationToken = default)
         {
-            var correo = dto.Correo.Trim().ToLowerInvariant();
-
-            var correoEnUso = await _context.Usuarios
-                .AnyAsync(u => u.Correo == correo, cancellationToken);
-
-            if (correoEnUso)
-            {
-                throw new BusinessRuleException($"El correo {correo} ya está registrado.");
-            }
+            var correo = dto.Correo.Trim();
 
             var usuario = new Usuario
             {
+                UserName = correo,
+                Email = correo,
+                PhoneNumber = Normalizar(dto.Telefono),
                 Nombres = dto.Nombres.Trim(),
                 Apellidos = dto.Apellidos.Trim(),
-                Correo = correo,
-                ContrasenaHash = _passwordHasher.Hash(dto.Contrasena),
                 TipoUsuario = dto.TipoUsuario,
                 Cedula = Normalizar(dto.Cedula),
-                Telefono = Normalizar(dto.Telefono),
-                CorreoConfirmado = false,
                 FechaRegistro = DateTime.UtcNow
             };
 
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync(cancellationToken);
+            var resultado = await _userManager.CreateAsync(usuario, dto.Contrasena);
+            GarantizarExito(resultado);
 
             return Proyectar(usuario);
         }
 
         public async Task<UsuarioDto?> AutenticarAsync(CredencialesDto dto, CancellationToken cancellationToken = default)
         {
-            var correo = dto.Correo.Trim().ToLowerInvariant();
-
-            using var conexion = _conexiones.CrearConexion();
-            var fila = await conexion.QuerySingleOrDefaultAsync<FilaCredenciales>(
-                new CommandDefinition(
-                    $"SELECT {ColumnasUsuario}, ContrasenaHash FROM {Tablas.Usuarios} WHERE Correo = @correo AND IsDeleted = 0",
-                    new { correo },
-                    cancellationToken: cancellationToken));
-
-            if (fila is null || !_passwordHasher.Verificar(dto.Contrasena, fila.ContrasenaHash))
+            var usuario = await _userManager.FindByEmailAsync(dto.Correo.Trim());
+            if (usuario is null)
             {
                 return null;
             }
 
-            return fila.AUsuarioDto();
+            if (await _userManager.IsLockedOutAsync(usuario))
+            {
+                throw new BusinessRuleException(
+                    "La cuenta está bloqueada temporalmente por intentos fallidos. Intente más tarde.");
+            }
+
+            if (!await _userManager.CheckPasswordAsync(usuario, dto.Contrasena))
+            {
+                // Identity cuenta el fallo y bloquea la cuenta al llegar al tope.
+                await _userManager.AccessFailedAsync(usuario);
+                return null;
+            }
+
+            await _userManager.ResetAccessFailedCountAsync(usuario);
+
+            return Proyectar(usuario);
         }
 
         public async Task<UsuarioDto> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default)
@@ -86,7 +95,7 @@ namespace Persistence.Services.Identidad
             using var conexion = _conexiones.CrearConexion();
             var usuario = await conexion.QuerySingleOrDefaultAsync<UsuarioDto>(
                 new CommandDefinition(
-                    $"SELECT {ColumnasUsuario} FROM {Tablas.Usuarios} WHERE Id = @id AND IsDeleted = 0",
+                    $"{ColumnasUsuario} WHERE Id = @id AND IsDeleted = 0",
                     new { id },
                     cancellationToken: cancellationToken));
 
@@ -95,63 +104,101 @@ namespace Persistence.Services.Identidad
 
         public async Task<UsuarioDto?> ObtenerPorCorreoAsync(string correo, CancellationToken cancellationToken = default)
         {
-            var normalizado = correo.Trim().ToLowerInvariant();
+            // Se compara contra NormalizedEmail porque es la columna indexada que
+            // mantiene Identity.
+            var normalizado = _userManager.NormalizeEmail(correo.Trim());
 
             using var conexion = _conexiones.CrearConexion();
             return await conexion.QuerySingleOrDefaultAsync<UsuarioDto>(
                 new CommandDefinition(
-                    $"SELECT {ColumnasUsuario} FROM {Tablas.Usuarios} WHERE Correo = @normalizado AND IsDeleted = 0",
+                    $"{ColumnasUsuario} WHERE NormalizedEmail = @normalizado AND IsDeleted = 0",
                     new { normalizado },
                     cancellationToken: cancellationToken));
         }
 
         public async Task<UsuarioDto> ActualizarPerfilAsync(int id, ActualizarPerfilDto dto, CancellationToken cancellationToken = default)
         {
-            var usuario = await ObtenerParaEscrituraAsync(id, cancellationToken);
+            var usuario = await ObtenerParaEscrituraAsync(id);
 
             usuario.Nombres = dto.Nombres.Trim();
             usuario.Apellidos = dto.Apellidos.Trim();
             usuario.Cedula = Normalizar(dto.Cedula);
-            usuario.Telefono = Normalizar(dto.Telefono);
+            usuario.PhoneNumber = Normalizar(dto.Telefono);
 
-            await _context.SaveChangesAsync(cancellationToken);
+            GarantizarExito(await _userManager.UpdateAsync(usuario));
 
             return Proyectar(usuario);
         }
 
         public async Task CambiarContrasenaAsync(int id, string contrasenaActual, string contrasenaNueva, CancellationToken cancellationToken = default)
         {
-            var usuario = await ObtenerParaEscrituraAsync(id, cancellationToken);
+            var usuario = await ObtenerParaEscrituraAsync(id);
 
-            if (!_passwordHasher.Verificar(contrasenaActual, usuario.ContrasenaHash))
-            {
-                throw new BusinessRuleException("La contraseña actual no es correcta.");
-            }
-
-            usuario.ContrasenaHash = _passwordHasher.Hash(contrasenaNueva);
-            await _context.SaveChangesAsync(cancellationToken);
+            GarantizarExito(await _userManager.ChangePasswordAsync(usuario, contrasenaActual, contrasenaNueva));
         }
 
-        public async Task ConfirmarCorreoAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<string> GenerarTokenConfirmacionCorreoAsync(int id, CancellationToken cancellationToken = default)
         {
-            var usuario = await ObtenerParaEscrituraAsync(id, cancellationToken);
+            var usuario = await ObtenerParaEscrituraAsync(id);
 
-            usuario.CorreoConfirmado = true;
-            await _context.SaveChangesAsync(cancellationToken);
+            return await _userManager.GenerateEmailConfirmationTokenAsync(usuario);
+        }
+
+        public async Task ConfirmarCorreoAsync(int id, string token, CancellationToken cancellationToken = default)
+        {
+            var usuario = await ObtenerParaEscrituraAsync(id);
+
+            GarantizarExito(await _userManager.ConfirmEmailAsync(usuario, token));
+        }
+
+        public async Task<string?> GenerarTokenRestablecimientoAsync(string correo, CancellationToken cancellationToken = default)
+        {
+            var usuario = await _userManager.FindByEmailAsync(correo.Trim());
+            if (usuario is null)
+            {
+                return null;
+            }
+
+            return await _userManager.GeneratePasswordResetTokenAsync(usuario);
+        }
+
+        public async Task RestablecerContrasenaAsync(string correo, string token, string contrasenaNueva, CancellationToken cancellationToken = default)
+        {
+            var usuario = await _userManager.FindByEmailAsync(correo.Trim())
+                ?? throw new NotFoundException($"No existe un usuario con el correo {correo.Trim()}.");
+
+            GarantizarExito(await _userManager.ResetPasswordAsync(usuario, token, contrasenaNueva));
         }
 
         public async Task EliminarAsync(int id, CancellationToken cancellationToken = default)
         {
-            var usuario = await ObtenerParaEscrituraAsync(id, cancellationToken);
+            var usuario = await ObtenerParaEscrituraAsync(id);
 
+            // Borrado lógico: DeleteAsync borraría la fila y dejaría solicitudes
+            // y calificaciones huérfanas.
             usuario.IsDeleted = true;
-            await _context.SaveChangesAsync(cancellationToken);
+            GarantizarExito(await _userManager.UpdateAsync(usuario));
         }
 
-        private async Task<Usuario> ObtenerParaEscrituraAsync(int id, CancellationToken cancellationToken)
+        private async Task<Usuario> ObtenerParaEscrituraAsync(int id)
         {
-            var usuario = await _context.Usuarios.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+            var usuario = await _userManager.FindByIdAsync(id.ToString());
             return usuario ?? throw new NotFoundException("el usuario", id);
+        }
+
+        /// <summary>
+        /// Traduce el resultado de Identity a la excepción de negocio de la
+        /// aplicación, conservando los motivos que dio.
+        /// </summary>
+        private static void GarantizarExito(IdentityResult resultado)
+        {
+            if (resultado.Succeeded)
+            {
+                return;
+            }
+
+            var motivos = string.Join(" ", resultado.Errors.Select(e => e.Description));
+            throw new BusinessRuleException(motivos);
         }
 
         private static string? Normalizar(string? valor)
@@ -161,29 +208,11 @@ namespace Persistence.Services.Identidad
             usuario.Id,
             usuario.Nombres,
             usuario.Apellidos,
-            usuario.Correo,
+            usuario.Email ?? string.Empty,
             usuario.TipoUsuario,
             usuario.Cedula,
-            usuario.Telefono,
-            usuario.CorreoConfirmado,
+            usuario.PhoneNumber,
+            usuario.EmailConfirmed,
             usuario.FechaRegistro);
-
-        /// <summary>Fila interna de lectura: el hash no sale de esta capa.</summary>
-        private sealed class FilaCredenciales
-        {
-            public int Id { get; init; }
-            public string Nombres { get; init; } = string.Empty;
-            public string Apellidos { get; init; } = string.Empty;
-            public string Correo { get; init; } = string.Empty;
-            public TipoUsuario TipoUsuario { get; init; }
-            public string? Cedula { get; init; }
-            public string? Telefono { get; init; }
-            public bool CorreoConfirmado { get; init; }
-            public DateTime FechaRegistro { get; init; }
-            public string ContrasenaHash { get; init; } = string.Empty;
-
-            public UsuarioDto AUsuarioDto() => new(
-                Id, Nombres, Apellidos, Correo, TipoUsuario, Cedula, Telefono, CorreoConfirmado, FechaRegistro);
-        }
     }
 }

@@ -118,7 +118,7 @@ namespace Persistence.Services.Tramites
                         d.Nombre AS DependenciaNombre,
                         sol.UsuarioId,
                         u.Nombres + ' ' + u.Apellidos AS UsuarioNombre,
-                        u.Correo AS UsuarioCorreo
+                        u.Email AS UsuarioCorreo
                 FROM    {Tablas.Solicitudes} sol
                 INNER JOIN {Tablas.Servicios} s ON s.Id = sol.ServicioId
                 INNER JOIN {Tablas.CategoriasServicio} c ON c.Id = s.CategoriaServicioId

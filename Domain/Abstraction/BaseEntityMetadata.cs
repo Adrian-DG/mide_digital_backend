@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Domain.Abstraction
 {
-    public abstract class BaseEntityMetadata
+    public abstract class BaseEntityMetadata : ISoftDeletable
     {
         public int Id { get; set; }
 

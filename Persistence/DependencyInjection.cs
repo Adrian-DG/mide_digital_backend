@@ -1,16 +1,17 @@
 using System;
-using Application.Abstraction;
 using Application.Services.Catalogo;
 using Application.Services.Contenido;
 using Application.Services.Identidad;
 using Application.Services.Retroalimentacion;
 using Application.Services.Tramites;
+using Domain.Common;
+using Domain.Entities.Identidad;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Persistence.Connections;
 using Persistence.Context;
-using Persistence.Security;
 using Persistence.Services.Catalogo;
 using Persistence.Services.Contenido;
 using Persistence.Services.Identidad;
@@ -20,9 +21,9 @@ using Persistence.Services.Tramites;
 namespace Persistence
 {
     /// <summary>
-    /// Registro único de la capa de datos: contexto de escritura (EF), fábrica de
-    /// conexiones de lectura (Dapper) y los servicios que implementan los
-    /// contratos de Application.
+    /// Registro único de la capa de datos: contexto de escritura (EF), Identity,
+    /// fábrica de conexiones de lectura (Dapper) y los servicios que implementan
+    /// los contratos de Application.
     /// </summary>
     public static class DependencyInjection
     {
@@ -42,7 +43,7 @@ namespace Persistence
             services.AddDbContext<MideDbContext>(options =>
                 options.UseSqlServer(connectionString, sql =>
                 {
-                    sql.MigrationsHistoryTable("__EFMigrationsHistory", Domain.Common.Esquemas.Catalogo);
+                    sql.MigrationsHistoryTable("__EFMigrationsHistory", Esquemas.Catalogo);
                     sql.EnableRetryOnFailure();
                 }));
 
@@ -50,9 +51,41 @@ namespace Persistence
             // cierra su propia conexión.
             services.AddSingleton<ISqlConnectionFactory>(new SqlConnectionFactory(connectionString));
 
-            services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+            return services
+                .AddIdentidad()
+                .AddServicios();
+        }
 
-            return services.AddServicios();
+        /// <summary>
+        /// AddIdentityCore y no AddIdentity: sin cookies ni SignInManager, porque
+        /// la API autentica por token y la emisión vive en Presentation.
+        /// Los proveedores de token (confirmación de correo, restablecimiento)
+        /// requieren Data Protection, que el host web registra por su cuenta.
+        /// </summary>
+        private static IServiceCollection AddIdentidad(this IServiceCollection services)
+        {
+            services
+                .AddIdentityCore<Usuario>(opciones =>
+                {
+                    opciones.User.RequireUniqueEmail = true;
+
+                    opciones.Password.RequiredLength = 10;
+                    opciones.Password.RequireDigit = true;
+                    opciones.Password.RequireUppercase = true;
+                    opciones.Password.RequireLowercase = true;
+                    opciones.Password.RequireNonAlphanumeric = true;
+
+                    opciones.Lockout.MaxFailedAccessAttempts = 5;
+                    opciones.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+
+                    // El ciudadano se registra desde la app; exigir el correo
+                    // confirmado para poder tramitar se decide en Presentation.
+                    opciones.SignIn.RequireConfirmedEmail = false;
+                })
+                .AddEntityFrameworkStores<MideDbContext>()
+                .AddDefaultTokenProviders();
+
+            return services;
         }
 
         /// <summary>

@@ -9,22 +9,29 @@ using Domain.Entities.Contenido;
 using Domain.Entities.Identidad;
 using Domain.Entities.Retroalimentacion;
 using Domain.Entities.Tramites;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Persistence.Context
 {
     /// <summary>
-    /// Modelo de escritura. Las lecturas van por Dapper, asi que aqui no se
+    /// Modelo de escritura. Las lecturas van por Dapper, así que aquí no se
     /// definen proyecciones ni vistas.
     /// </summary>
-    public class MideDbContext : DbContext
+    /// <remarks>
+    /// Hereda de <see cref="IdentityUserContext{TUser, TKey}"/> y no de
+    /// IdentityDbContext: sin roles configurados, las cuatro tablas de roles
+    /// sobrarían. Cambiar a roles más adelante es cambiar la clase base y
+    /// generar una migración.
+    /// </remarks>
+    public class MideDbContext : IdentityUserContext<Usuario, int>
     {
         public MideDbContext(DbContextOptions<MideDbContext> options) : base(options)
         {
         }
 
-        public DbSet<Usuario> Usuarios => Set<Usuario>();
+        /// <summary>Alias del DbSet <c>Users</c> que declara Identity.</summary>
+        public DbSet<Usuario> Usuarios => Users;
 
         public DbSet<Dependencia> Dependencias => Set<Dependencia>();
         public DbSet<CategoriaServicio> CategoriasServicio => Set<CategoriaServicio>();
@@ -40,11 +47,13 @@ namespace Persistence.Context
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            // Identity primero: nuestras configuraciones ajustan lo que él define
+            // (nombre de tabla, esquema y columnas propias del MIDE).
+            base.OnModelCreating(modelBuilder);
+
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(MideDbContext).Assembly);
 
             AplicarFiltroDeBorradoLogico(modelBuilder);
-
-            base.OnModelCreating(modelBuilder);
         }
 
         public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
@@ -61,20 +70,20 @@ namespace Persistence.Context
 
         /// <summary>
         /// Ninguna consulta debe devolver registros marcados como eliminados;
-        /// el filtro se aplica por convencion a toda entidad que herede de
-        /// <see cref="BaseEntityMetadata"/>.
+        /// el filtro se aplica por convención a toda entidad que implemente
+        /// <see cref="ISoftDeletable"/>, incluido el usuario de Identity.
         /// </summary>
         private static void AplicarFiltroDeBorradoLogico(ModelBuilder modelBuilder)
         {
             foreach (var tipo in modelBuilder.Model.GetEntityTypes())
             {
-                if (!typeof(BaseEntityMetadata).IsAssignableFrom(tipo.ClrType))
+                if (!typeof(ISoftDeletable).IsAssignableFrom(tipo.ClrType))
                 {
                     continue;
                 }
 
                 var parametro = Expression.Parameter(tipo.ClrType, "e");
-                var propiedad = Expression.Property(parametro, nameof(BaseEntityMetadata.IsDeleted));
+                var propiedad = Expression.Property(parametro, nameof(ISoftDeletable.IsDeleted));
                 var filtro = Expression.Lambda(Expression.Not(propiedad), parametro);
 
                 modelBuilder.Entity(tipo.ClrType).HasQueryFilter(filtro);
@@ -82,8 +91,8 @@ namespace Persistence.Context
         }
 
         /// <summary>
-        /// Marca las fechas de auditoria. El usuario responsable lo fija el
-        /// servicio, que es quien sabe en nombre de quien actua.
+        /// Marca las fechas de auditoría. El usuario responsable lo fija el
+        /// servicio, que es quien sabe en nombre de quién actúa.
         /// </summary>
         private void SellarAuditoria()
         {
