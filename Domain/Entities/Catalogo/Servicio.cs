@@ -27,7 +27,16 @@ namespace Domain.Entities.Catalogo
 
         public string GenerarSecuencia()
         {
-            return $"SERV-{Secuencias.Fragmento(CategoriaServicio?.Nombre)}-{Secuencias.Fragmento(Nombre)}";
+            return GenerarSecuencia(CategoriaServicio?.Nombre, Nombre);
+        }
+
+        /// <summary>
+        /// Misma regla de formato para quien ya tiene los nombres sueltos
+        /// (por ejemplo, el modelo de lectura) y no una instancia completa.
+        /// </summary>
+        public static string GenerarSecuencia(string? nombreCategoria, string? nombreServicio)
+        {
+            return $"SERV-{Secuencias.Fragmento(nombreCategoria)}-{Secuencias.Fragmento(nombreServicio)}";
         }
     }
 }

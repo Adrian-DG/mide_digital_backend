@@ -30,7 +30,16 @@ namespace Domain.Entities.Tramites
 
         public string GenerarSecuencia()
         {
-            return $"SOL-{Servicio?.GenerarSecuencia()}-{Id}";
+            return GenerarSecuencia(Servicio?.CategoriaServicio?.Nombre, Servicio?.Nombre, Id);
+        }
+
+        /// <summary>
+        /// Misma regla de formato para quien ya tiene los nombres sueltos
+        /// (por ejemplo, el modelo de lectura) y no una instancia completa.
+        /// </summary>
+        public static string GenerarSecuencia(string? nombreCategoria, string? nombreServicio, int id)
+        {
+            return $"SOL-{Servicio.GenerarSecuencia(nombreCategoria, nombreServicio)}-{id}";
         }
     }
 }
