@@ -14,7 +14,7 @@ namespace Application.DTOs.Tramites
         int ServicioId,
         string ServicioNombre,
         string DependenciaSiglas,
-        int UsuarioId,
+        Guid UsuarioId,
         string UsuarioNombre,
         int TotalDocumentos);
 
@@ -32,7 +32,7 @@ namespace Application.DTOs.Tramites
         public int DependenciaId { get; init; }
         public string DependenciaNombre { get; init; } = string.Empty;
 
-        public int UsuarioId { get; init; }
+        public Guid UsuarioId { get; init; }
         public string UsuarioNombre { get; init; } = string.Empty;
         public string UsuarioCorreo { get; init; } = string.Empty;
 
@@ -43,7 +43,7 @@ namespace Application.DTOs.Tramites
     public record CrearSolicitudDto
     {
         public int ServicioId { get; init; }
-        public int UsuarioId { get; init; }
+        public Guid UsuarioId { get; init; }
         public string? Observaciones { get; init; }
     }
 
@@ -55,7 +55,7 @@ namespace Application.DTOs.Tramites
 
     public class ConsultarSolicitudesDto : ConsultaPaginada
     {
-        public int? UsuarioId { get; set; }
+        public Guid? UsuarioId { get; set; }
         public int? ServicioId { get; set; }
         public int? DependenciaId { get; set; }
         public EstadoSolicitud? Estado { get; set; }

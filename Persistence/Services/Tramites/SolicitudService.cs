@@ -192,9 +192,11 @@ namespace Persistence.Services.Tramites
                 ServicioId = dto.ServicioId,
                 UsuarioId = dto.UsuarioId,
                 Estado = EstadoSolicitud.PENDIENTE,
-                Observaciones = string.IsNullOrWhiteSpace(dto.Observaciones) ? null : dto.Observaciones.Trim(),
-                CreatedBy = dto.UsuarioId,
-                UpdatedBy = dto.UsuarioId
+                Observaciones = string.IsNullOrWhiteSpace(dto.Observaciones) ? null : dto.Observaciones.Trim()
+
+                // CreatedBy y UpdatedBy los sella el interceptor con el usuario
+                // de la petición: UsuarioId es el solicitante, CreatedBy es quien
+                // registró el trámite, que no siempre son la misma persona.
             };
 
             _context.Solicitudes.Add(solicitud);

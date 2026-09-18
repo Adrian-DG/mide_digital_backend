@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Domain.Abstraction;
 using Domain.Entities.Catalogo;
-using Domain.Entities.Identidad;
 using Domain.Enums;
 
 namespace Domain.Entities.Tramites
@@ -18,15 +17,18 @@ namespace Domain.Entities.Tramites
         public int ServicioId { get; set; }
         public virtual Servicio? Servicio { get; set; }
 
-        public int UsuarioId { get; set; }
-        public virtual Usuario? Usuario { get; set; }
+        /// <summary>
+        /// Solo el identificador: la entidad del usuario vive en la capa de
+        /// persistencia, porque hereda de Identity.
+        /// </summary>
+        public Guid UsuarioId { get; set; }
 
         public virtual ICollection<DocumentoSolicitud> Documentos { get; set; } = new List<DocumentoSolicitud>();
 
         public DateTime CreatedAt { get; set; }
-        public int CreatedBy { get; set; }
+        public Guid CreatedBy { get; set; }
         public DateTime UpdatedAt { get; set; }
-        public int UpdatedBy { get; set; }
+        public Guid UpdatedBy { get; set; }
 
         public string GenerarSecuencia()
         {

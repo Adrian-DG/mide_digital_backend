@@ -4,7 +4,7 @@ using Domain.Enums;
 namespace Application.DTOs.Identidad
 {
     public record UsuarioDto(
-        int Id,
+        Guid Id,
         string Nombres,
         string Apellidos,
         string Correo,

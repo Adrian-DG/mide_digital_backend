@@ -2,6 +2,7 @@ using Domain.Common;
 using Domain.Entities.Tramites;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Persistence.Identity;
 
 namespace Persistence.Configurations.Tramites
 {
@@ -25,7 +26,9 @@ namespace Persistence.Configurations.Tramites
                    .HasDatabaseName("IX_Solicitudes_Servicio_Estado");
             builder.HasIndex(s => s.CreatedAt).HasDatabaseName("IX_Solicitudes_CreatedAt");
 
-            builder.HasOne(s => s.Usuario)
+            // Relación configurada solo desde este extremo: Solicitud no tiene
+            // navegación al usuario, que es una entidad de esta capa.
+            builder.HasOne<Usuario>()
                    .WithMany(u => u.Solicitudes)
                    .HasForeignKey(s => s.UsuarioId)
                    .OnDelete(DeleteBehavior.Restrict);

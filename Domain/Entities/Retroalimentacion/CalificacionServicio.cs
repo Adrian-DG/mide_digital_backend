@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Domain.Abstraction;
 using Domain.Entities.Catalogo;
-using Domain.Entities.Identidad;
 
 namespace Domain.Entities.Retroalimentacion
 {
@@ -38,8 +37,11 @@ namespace Domain.Entities.Retroalimentacion
         public string? Comentario { get; set; }
         public DateTime FechaCalificacion { get; set; }
 
-        public int UsuarioId { get; set; }
-        public virtual Usuario? Usuario { get; set; }
+        /// <summary>
+        /// Solo el identificador: la entidad del usuario vive en la capa de
+        /// persistencia, porque hereda de Identity.
+        /// </summary>
+        public Guid UsuarioId { get; set; }
 
         public int ServicioId { get; set; }
         public virtual Servicio? Servicio { get; set; }

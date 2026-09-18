@@ -8,8 +8,8 @@ namespace Domain.Abstraction
     public interface IAuditableEntityMetadata 
     {
         DateTime CreatedAt { get; set; }
-        int CreatedBy { get; set; }
+        Guid CreatedBy { get; set; }
         DateTime UpdatedAt { get; set; }
-        int UpdatedBy { get; set; } 
+        Guid UpdatedBy { get; set; } 
     }
 }

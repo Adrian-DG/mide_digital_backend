@@ -20,21 +20,21 @@ namespace Application.Services.Identidad
         /// </summary>
         Task<UsuarioDto?> AutenticarAsync(CredencialesDto dto, CancellationToken cancellationToken = default);
 
-        Task<UsuarioDto> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default);
+        Task<UsuarioDto> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken = default);
 
         Task<UsuarioDto?> ObtenerPorCorreoAsync(string correo, CancellationToken cancellationToken = default);
 
-        Task<UsuarioDto> ActualizarPerfilAsync(int id, ActualizarPerfilDto dto, CancellationToken cancellationToken = default);
+        Task<UsuarioDto> ActualizarPerfilAsync(Guid id, ActualizarPerfilDto dto, CancellationToken cancellationToken = default);
 
-        Task CambiarContrasenaAsync(int id, string contrasenaActual, string contrasenaNueva, CancellationToken cancellationToken = default);
+        Task CambiarContrasenaAsync(Guid id, string contrasenaActual, string contrasenaNueva, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Genera el token de confirmación de correo. Quien lo envía al usuario es
         /// la capa que tenga el servicio de correo, no esta.
         /// </summary>
-        Task<string> GenerarTokenConfirmacionCorreoAsync(int id, CancellationToken cancellationToken = default);
+        Task<string> GenerarTokenConfirmacionCorreoAsync(Guid id, CancellationToken cancellationToken = default);
 
-        Task ConfirmarCorreoAsync(int id, string token, CancellationToken cancellationToken = default);
+        Task ConfirmarCorreoAsync(Guid id, string token, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Genera el token de restablecimiento. Devuelve null si el correo no
@@ -44,6 +44,6 @@ namespace Application.Services.Identidad
 
         Task RestablecerContrasenaAsync(string correo, string token, string contrasenaNueva, CancellationToken cancellationToken = default);
 
-        Task EliminarAsync(int id, CancellationToken cancellationToken = default);
+        Task EliminarAsync(Guid id, CancellationToken cancellationToken = default);
     }
 }

@@ -2,6 +2,7 @@ using Domain.Common;
 using Domain.Entities.Retroalimentacion;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Persistence.Identity;
 
 namespace Persistence.Configurations.Retroalimentacion
 {
@@ -19,9 +20,9 @@ namespace Persistence.Configurations.Retroalimentacion
             builder.HasKey(c => c.Id);
             builder.Property(c => c.Id).ValueGeneratedOnAdd();
 
-            // El setter de Estrellas valida el rango 1-5 y lanza si se sale de el.
+            // El setter de Estrellas valida el rango 1-5 y lanza si se sale de él.
             // EF debe escribir el campo de respaldo para no reventar al materializar
-            // filas historicas que no cumplan la regla.
+            // filas históricas que no cumplan la regla.
             builder.Property(c => c.Estrellas)
                    .HasField("_estrellas")
                    .UsePropertyAccessMode(PropertyAccessMode.Field)
@@ -33,7 +34,9 @@ namespace Persistence.Configurations.Retroalimentacion
             builder.HasIndex(c => new { c.ServicioId, c.UsuarioId })
                    .HasDatabaseName("IX_CalificacionesServicio_Servicio_Usuario");
 
-            builder.HasOne(c => c.Usuario)
+            // Ver la nota en SolicitudConfiguration: la navegación existe solo
+            // en el extremo del usuario.
+            builder.HasOne<Usuario>()
                    .WithMany(u => u.Calificaciones)
                    .HasForeignKey(c => c.UsuarioId)
                    .OnDelete(DeleteBehavior.Restrict);

@@ -1,16 +1,13 @@
 using System;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
 using Domain.Abstraction;
 using Domain.Entities.Catalogo;
 using Domain.Entities.Contenido;
-using Domain.Entities.Identidad;
 using Domain.Entities.Retroalimentacion;
 using Domain.Entities.Tramites;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Persistence.Identity;
 
 namespace Persistence.Context
 {
@@ -23,8 +20,13 @@ namespace Persistence.Context
     /// IdentityDbContext: sin roles configurados, las cuatro tablas de roles
     /// sobrarían. Cambiar a roles más adelante es cambiar la clase base y
     /// generar una migración.
+    /// <para>
+    /// La auditoría no se resuelve aquí sobreescribiendo SaveChanges: la aplica
+    /// un interceptor registrado al configurar el contexto, así el contexto no
+    /// necesita conocer al usuario actual ni al reloj.
+    /// </para>
     /// </remarks>
-    public class MideDbContext : IdentityUserContext<Usuario, int>
+    public class MideDbContext : IdentityUserContext<Usuario, Guid>
     {
         public MideDbContext(DbContextOptions<MideDbContext> options) : base(options)
         {
@@ -56,18 +58,6 @@ namespace Persistence.Context
             AplicarFiltroDeBorradoLogico(modelBuilder);
         }
 
-        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-        {
-            SellarAuditoria();
-            return base.SaveChangesAsync(cancellationToken);
-        }
-
-        public override int SaveChanges()
-        {
-            SellarAuditoria();
-            return base.SaveChanges();
-        }
-
         /// <summary>
         /// Ninguna consulta debe devolver registros marcados como eliminados;
         /// el filtro se aplica por convención a toda entidad que implemente
@@ -87,32 +77,6 @@ namespace Persistence.Context
                 var filtro = Expression.Lambda(Expression.Not(propiedad), parametro);
 
                 modelBuilder.Entity(tipo.ClrType).HasQueryFilter(filtro);
-            }
-        }
-
-        /// <summary>
-        /// Marca las fechas de auditoría. El usuario responsable lo fija el
-        /// servicio, que es quien sabe en nombre de quién actúa.
-        /// </summary>
-        private void SellarAuditoria()
-        {
-            var ahora = DateTime.UtcNow;
-
-            foreach (var entrada in ChangeTracker.Entries<IAuditableEntityMetadata>())
-            {
-                switch (entrada.State)
-                {
-                    case EntityState.Added:
-                        entrada.Entity.CreatedAt = ahora;
-                        entrada.Entity.UpdatedAt = ahora;
-                        break;
-
-                    case EntityState.Modified:
-                        entrada.Entity.UpdatedAt = ahora;
-                        entrada.Property(nameof(IAuditableEntityMetadata.CreatedAt)).IsModified = false;
-                        entrada.Property(nameof(IAuditableEntityMetadata.CreatedBy)).IsModified = false;
-                        break;
-                }
             }
         }
     }

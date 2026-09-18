@@ -1,7 +1,7 @@
 using Domain.Common;
-using Domain.Entities.Identidad;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Persistence.Identity;
 
 namespace Persistence.Configurations.Identidad
 {

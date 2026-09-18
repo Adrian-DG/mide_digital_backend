@@ -22,7 +22,7 @@ namespace Application.Services.Tramites
         /// Avanza el tramite. Rechaza las transiciones invalidas y exige que los
         /// requisitos obligatorios esten cubiertos antes de aprobar.
         /// </summary>
-        Task<SolicitudDetalleDto> CambiarEstadoAsync(int solicitudId, CambiarEstadoSolicitudDto dto, int usuarioResponsableId, CancellationToken cancellationToken = default);
+        Task<SolicitudDetalleDto> CambiarEstadoAsync(int solicitudId, CambiarEstadoSolicitudDto dto, Guid usuarioResponsableId, CancellationToken cancellationToken = default);
 
         /// <summary>Requisitos obligatorios del servicio que aun no tienen documento cargado.</summary>
         Task<IReadOnlyCollection<string>> ListarRequisitosPendientesAsync(int solicitudId, CancellationToken cancellationToken = default);

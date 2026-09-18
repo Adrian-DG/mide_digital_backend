@@ -12,7 +12,7 @@ namespace Application.Services.Retroalimentacion
 
         Task<PagedResult<CalificacionServicioDto>> ListarPorServicioAsync(int servicioId, ConsultaPaginada paginacion, CancellationToken cancellationToken = default);
 
-        Task<IReadOnlyCollection<CalificacionServicioDto>> ListarPorUsuarioAsync(int usuarioId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyCollection<CalificacionServicioDto>> ListarPorUsuarioAsync(Guid usuarioId, CancellationToken cancellationToken = default);
 
         Task<ResumenCalificacionesDto> ObtenerResumenAsync(int servicioId, CancellationToken cancellationToken = default);
 

@@ -10,13 +10,13 @@ namespace Application.DTOs.Retroalimentacion
         DateTime FechaCalificacion,
         int ServicioId,
         string ServicioNombre,
-        int UsuarioId,
+        Guid UsuarioId,
         string UsuarioNombre);
 
     public record CrearCalificacionDto
     {
         public int ServicioId { get; init; }
-        public int UsuarioId { get; init; }
+        public Guid UsuarioId { get; init; }
         public int Estrellas { get; init; }
         public string? Comentario { get; init; }
     }

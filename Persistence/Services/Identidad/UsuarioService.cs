@@ -6,11 +6,10 @@ using Application.DTOs.Identidad;
 using Application.Exceptions;
 using Application.Services.Identidad;
 using Dapper;
-using Domain.Entities.Identidad;
-using Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 using Persistence.Connections;
 using Persistence.Constants;
+using Persistence.Identity;
 
 namespace Persistence.Services.Identidad
 {
@@ -35,11 +34,13 @@ namespace Persistence.Services.Identidad
 
         private readonly UserManager<Usuario> _userManager;
         private readonly ISqlConnectionFactory _conexiones;
+        private readonly TimeProvider _reloj;
 
-        public UsuarioService(UserManager<Usuario> userManager, ISqlConnectionFactory conexiones)
+        public UsuarioService(UserManager<Usuario> userManager, ISqlConnectionFactory conexiones, TimeProvider reloj)
         {
             _userManager = userManager;
             _conexiones = conexiones;
+            _reloj = reloj;
         }
 
         public async Task<UsuarioDto> RegistrarAsync(RegistrarUsuarioDto dto, CancellationToken cancellationToken = default)
@@ -55,11 +56,10 @@ namespace Persistence.Services.Identidad
                 Apellidos = dto.Apellidos.Trim(),
                 TipoUsuario = dto.TipoUsuario,
                 Cedula = Normalizar(dto.Cedula),
-                FechaRegistro = DateTime.UtcNow
+                FechaRegistro = _reloj.GetUtcNow().UtcDateTime
             };
 
-            var resultado = await _userManager.CreateAsync(usuario, dto.Contrasena);
-            GarantizarExito(resultado);
+            GarantizarExito(await _userManager.CreateAsync(usuario, dto.Contrasena));
 
             return Proyectar(usuario);
         }

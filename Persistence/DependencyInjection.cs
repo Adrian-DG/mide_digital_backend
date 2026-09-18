@@ -1,17 +1,20 @@
 using System;
+using Application.Abstraction;
 using Application.Services.Catalogo;
 using Application.Services.Contenido;
 using Application.Services.Identidad;
 using Application.Services.Retroalimentacion;
 using Application.Services.Tramites;
 using Domain.Common;
-using Domain.Entities.Identidad;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Persistence.Connections;
 using Persistence.Context;
+using Persistence.Identity;
+using Persistence.Interceptors;
 using Persistence.Services.Catalogo;
 using Persistence.Services.Contenido;
 using Persistence.Services.Identidad;
@@ -21,9 +24,9 @@ using Persistence.Services.Tramites;
 namespace Persistence
 {
     /// <summary>
-    /// Registro único de la capa de datos: contexto de escritura (EF), Identity,
-    /// fábrica de conexiones de lectura (Dapper) y los servicios que implementan
-    /// los contratos de Application.
+    /// Registro único de la capa de datos: contexto de escritura (EF) con sus
+    /// interceptores, Identity, fábrica de conexiones de lectura (Dapper) y los
+    /// servicios que implementan los contratos de Application.
     /// </summary>
     public static class DependencyInjection
     {
@@ -40,12 +43,22 @@ namespace Persistence
 
         public static IServiceCollection AddPersistence(this IServiceCollection services, string connectionString)
         {
-            services.AddDbContext<MideDbContext>(options =>
-                options.UseSqlServer(connectionString, sql =>
-                {
-                    sql.MigrationsHistoryTable("__EFMigrationsHistory", Esquemas.Catalogo);
-                    sql.EnableRetryOnFailure();
-                }));
+            // TryAdd: si Presentation ya registró su propio reloj o su propio
+            // proveedor de usuario actual (el que lee el token), esos ganan.
+            services.TryAddSingleton(TimeProvider.System);
+            services.TryAddScoped<IUsuarioActual, UsuarioActualNoIdentificado>();
+
+            services.AddScoped<AuditableEntityInterceptor>();
+
+            services.AddDbContext<MideDbContext>((proveedor, options) =>
+                options
+                    .UseSqlServer(connectionString, sql =>
+                    {
+                        sql.MigrationsAssembly(typeof(MideDbContext).Assembly.FullName);
+                        sql.MigrationsHistoryTable("__EFMigrationsHistory", Esquemas.Catalogo);
+                        sql.EnableRetryOnFailure();
+                    })
+                    .AddInterceptors(proveedor.GetRequiredService<AuditableEntityInterceptor>()));
 
             // Singleton: solo guarda la cadena de conexión; cada llamada abre y
             // cierra su propia conexión.
