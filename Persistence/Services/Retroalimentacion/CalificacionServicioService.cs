@@ -124,7 +124,7 @@ namespace Persistence.Services.Retroalimentacion
             };
         }
 
-        public async Task<IReadOnlyCollection<CalificacionServicioDto>> ListarPorUsuarioAsync(int usuarioId, CancellationToken cancellationToken = default)
+        public async Task<IReadOnlyCollection<CalificacionServicioDto>> ListarPorUsuarioAsync(Guid usuarioId, CancellationToken cancellationToken = default)
         {
             var sql = $@"{ColumnasCalificacion}
                 WHERE   cal.UsuarioId = @usuarioId AND cal.IsDeleted = 0

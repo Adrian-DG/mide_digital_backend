@@ -16,6 +16,13 @@ namespace Persistence.Configurations.Identidad
         {
             builder.ToTable("Usuarios", Esquemas.Identidad);
 
+            // La llave es un Guid, así que la genera la base de datos con
+            // NEWSEQUENTIALID(): un Guid aleatorio como clave agrupada fragmenta
+            // el índice en cada inserción.
+            builder.Property(u => u.Id)
+                   .HasDefaultValueSql("NEWSEQUENTIALID()")
+                   .ValueGeneratedOnAdd();
+
             builder.Property(u => u.Nombres).HasMaxLength(100).IsRequired();
             builder.Property(u => u.Apellidos).HasMaxLength(100).IsRequired();
             builder.Property(u => u.TipoUsuario).HasConversion<int>().IsRequired();

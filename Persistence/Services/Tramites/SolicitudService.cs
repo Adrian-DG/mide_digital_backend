@@ -271,7 +271,7 @@ namespace Persistence.Services.Tramites
         public async Task<SolicitudDetalleDto> CambiarEstadoAsync(
             int solicitudId,
             CambiarEstadoSolicitudDto dto,
-            int usuarioResponsableId,
+            Guid usuarioResponsableId,
             CancellationToken cancellationToken = default)
         {
             var solicitud = await ObtenerParaEscrituraAsync(solicitudId, cancellationToken);
@@ -372,7 +372,7 @@ namespace Persistence.Services.Tramites
             public string ServicioNombre { get; init; } = string.Empty;
             public string CategoriaNombre { get; init; } = string.Empty;
             public string DependenciaSiglas { get; init; } = string.Empty;
-            public int UsuarioId { get; init; }
+            public Guid UsuarioId { get; init; }
             public string UsuarioNombre { get; init; } = string.Empty;
             public int TotalDocumentos { get; init; }
 
@@ -402,7 +402,7 @@ namespace Persistence.Services.Tramites
             public string CategoriaNombre { get; init; } = string.Empty;
             public int DependenciaId { get; init; }
             public string DependenciaNombre { get; init; } = string.Empty;
-            public int UsuarioId { get; init; }
+            public Guid UsuarioId { get; init; }
             public string UsuarioNombre { get; init; } = string.Empty;
             public string UsuarioCorreo { get; init; } = string.Empty;
 

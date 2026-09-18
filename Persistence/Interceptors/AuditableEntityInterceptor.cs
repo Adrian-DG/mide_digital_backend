@@ -22,7 +22,7 @@ namespace Persistence.Interceptors
         /// servicio ya puso un identificador explícito (por ejemplo, el revisor
         /// que aprueba un trámite en nombre de otro), el interceptor lo respeta.
         /// </summary>
-        private const int SinAsignar = 0;
+        private static readonly Guid SinAsignar = Guid.Empty;
 
         private readonly IUsuarioActual _usuarioActual;
         private readonly TimeProvider _reloj;
@@ -107,7 +107,7 @@ namespace Persistence.Interceptors
             var propiedad = entrada.Property(nameof(IAuditableEntityMetadata.UpdatedBy));
 
             return propiedad.IsModified
-                   && propiedad.CurrentValue is int actual
+                   && propiedad.CurrentValue is Guid actual
                    && actual != SinAsignar;
         }
     }

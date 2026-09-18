@@ -90,7 +90,7 @@ namespace Persistence.Services.Identidad
             return Proyectar(usuario);
         }
 
-        public async Task<UsuarioDto> ObtenerPorIdAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<UsuarioDto> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken = default)
         {
             using var conexion = _conexiones.CrearConexion();
             var usuario = await conexion.QuerySingleOrDefaultAsync<UsuarioDto>(
@@ -116,7 +116,7 @@ namespace Persistence.Services.Identidad
                     cancellationToken: cancellationToken));
         }
 
-        public async Task<UsuarioDto> ActualizarPerfilAsync(int id, ActualizarPerfilDto dto, CancellationToken cancellationToken = default)
+        public async Task<UsuarioDto> ActualizarPerfilAsync(Guid id, ActualizarPerfilDto dto, CancellationToken cancellationToken = default)
         {
             var usuario = await ObtenerParaEscrituraAsync(id);
 
@@ -130,21 +130,21 @@ namespace Persistence.Services.Identidad
             return Proyectar(usuario);
         }
 
-        public async Task CambiarContrasenaAsync(int id, string contrasenaActual, string contrasenaNueva, CancellationToken cancellationToken = default)
+        public async Task CambiarContrasenaAsync(Guid id, string contrasenaActual, string contrasenaNueva, CancellationToken cancellationToken = default)
         {
             var usuario = await ObtenerParaEscrituraAsync(id);
 
             GarantizarExito(await _userManager.ChangePasswordAsync(usuario, contrasenaActual, contrasenaNueva));
         }
 
-        public async Task<string> GenerarTokenConfirmacionCorreoAsync(int id, CancellationToken cancellationToken = default)
+        public async Task<string> GenerarTokenConfirmacionCorreoAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var usuario = await ObtenerParaEscrituraAsync(id);
 
             return await _userManager.GenerateEmailConfirmationTokenAsync(usuario);
         }
 
-        public async Task ConfirmarCorreoAsync(int id, string token, CancellationToken cancellationToken = default)
+        public async Task ConfirmarCorreoAsync(Guid id, string token, CancellationToken cancellationToken = default)
         {
             var usuario = await ObtenerParaEscrituraAsync(id);
 
@@ -170,7 +170,7 @@ namespace Persistence.Services.Identidad
             GarantizarExito(await _userManager.ResetPasswordAsync(usuario, token, contrasenaNueva));
         }
 
-        public async Task EliminarAsync(int id, CancellationToken cancellationToken = default)
+        public async Task EliminarAsync(Guid id, CancellationToken cancellationToken = default)
         {
             var usuario = await ObtenerParaEscrituraAsync(id);
 
@@ -180,7 +180,7 @@ namespace Persistence.Services.Identidad
             GarantizarExito(await _userManager.UpdateAsync(usuario));
         }
 
-        private async Task<Usuario> ObtenerParaEscrituraAsync(int id)
+        private async Task<Usuario> ObtenerParaEscrituraAsync(Guid id)
         {
             var usuario = await _userManager.FindByIdAsync(id.ToString());
             return usuario ?? throw new NotFoundException("el usuario", id);
