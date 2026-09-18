@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Domain.Abstraction;
 
-namespace Domain.Entities
+namespace Domain.Entities.Contenido
 {
     public class Noticia : BaseEntityMetadata
     {

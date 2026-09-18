@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Domain.Abstraction;
+using Domain.Entities.Tramites;
 
-namespace Domain.Entities
+namespace Domain.Entities.Catalogo
 {
     public class Requisito : BaseEntityMetadata
     {

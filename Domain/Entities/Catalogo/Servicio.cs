@@ -4,8 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using Domain.Abstraction;
 using Domain.Common;
+using Domain.Entities.Retroalimentacion;
+using Domain.Entities.Tramites;
 
-namespace Domain.Entities
+namespace Domain.Entities.Catalogo
 {
     public class Servicio : BaseEntityMetadata
     {

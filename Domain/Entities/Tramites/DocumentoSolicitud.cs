@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Domain.Abstraction;
+using Domain.Entities.Catalogo;
 
-namespace Domain.Entities
+namespace Domain.Entities.Tramites
 {
     public class DocumentoSolicitud : BaseEntityMetadata
     {

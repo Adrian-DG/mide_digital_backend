@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Domain.Abstraction;
+using Domain.Entities.Retroalimentacion;
+using Domain.Entities.Tramites;
 using Domain.Enums;
 
-namespace Domain.Entities
+namespace Domain.Entities.Identidad
 {
     public class Usuario : BaseEntityMetadata
     {

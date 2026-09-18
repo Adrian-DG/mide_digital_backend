@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Domain.Abstraction;
+using Domain.Entities.Catalogo;
+using Domain.Entities.Identidad;
 using Domain.Enums;
 
-namespace Domain.Entities
+namespace Domain.Entities.Tramites
 {
     public class Solicitud : BaseEntityMetadata, IAuditableEntityMetadata
     {

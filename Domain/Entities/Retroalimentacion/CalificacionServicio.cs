@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Domain.Abstraction;
+using Domain.Entities.Catalogo;
+using Domain.Entities.Identidad;
 
-namespace Domain.Entities
+namespace Domain.Entities.Retroalimentacion
 {
     public class CalificacionServicio : BaseEntityMetadata
     {
