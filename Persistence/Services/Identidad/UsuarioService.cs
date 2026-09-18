@@ -74,7 +74,7 @@ namespace Persistence.Services.Identidad
 
             if (await _userManager.IsLockedOutAsync(usuario))
             {
-                throw new BusinessRuleException(
+                throw new CuentaBloqueadaException(
                     "La cuenta está bloqueada temporalmente por intentos fallidos. Intente más tarde.");
             }
 
