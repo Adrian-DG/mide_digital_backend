@@ -5,6 +5,7 @@ using Application.Abstraction;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Persistence;
+using Persistence.Seeding;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,6 +71,14 @@ app.UseExceptionHandler();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    // Usuarios para probar el login (ver Persistence/Seeding/UsuariosDePrueba.cs).
+    // Doble condición a propósito: nunca en otro entorno, y se puede apagar en local.
+    if (app.Configuration.GetValue<bool>("DatosDePrueba:Sembrar"))
+    {
+        await using var alcance = app.Services.CreateAsyncScope();
+        await alcance.ServiceProvider.GetRequiredService<SembradorUsuariosDePrueba>().SembrarAsync();
+    }
 }
 
 app.UseHttpsRedirection();

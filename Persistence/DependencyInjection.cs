@@ -15,6 +15,7 @@ using Persistence.Connections;
 using Persistence.Context;
 using Persistence.Identity;
 using Persistence.Interceptors;
+using Persistence.Seeding;
 using Persistence.Services.Catalogo;
 using Persistence.Services.Contenido;
 using Persistence.Services.Identidad;
@@ -63,6 +64,9 @@ namespace Persistence
             // Singleton: solo guarda la cadena de conexión; cada llamada abre y
             // cierra su propia conexión.
             services.AddSingleton<ISqlConnectionFactory>(new SqlConnectionFactory(connectionString));
+
+            // Se registra siempre, pero solo el host decide ejecutarlo (en desarrollo).
+            services.AddScoped<SembradorUsuariosDePrueba>();
 
             return services
                 .AddIdentidad()
